@@ -1,0 +1,118 @@
+/* src/index.css */
+
+/* --- Step 1: Import Tailwind CSS core styles --- */
+@import "tailwindcss";
+
+/* --- Step 2: Define CSS Variables for your theme colors --- */
+
+/* Default (Light) Theme Variables */
+:root {
+  /* Backgrounds */
+  --bg-primary: #F3F4F6; /* General page background */
+  --bg-card: #FFFFFF;    /* Card/panel background */
+  --bg-button-secondary: #E5E7EB; /* Gray button background */
+  --bg-input: #FFFFFF;   /* Input background */
+  --bg-table-header: #F9FAFB; /* Table header background */
+  --bg-green-status: #D1FAE5; /* Green status background */
+  --bg-yellow-status: #FEF3C7; /* Yellow status background */
+  --bg-gray-button-hover: #F0F0F0; /* Gray button hover */
+  --bg-blue-hover: #2563EB; /* Blue button hover */
+  --bg-green-hover: #16A34A; /* Green button hover */
+
+  /* Text Colors */
+  --text-primary: #1F2937; /* Dark text for light mode */
+  --text-secondary: #6B7280; /* Gray text */
+  --text-placeholder: #9CA3AF; /* Placeholder text */
+  --text-link: #2563EB; /* Blue link text */
+  --text-green: #065F46; /* Green text */
+  --text-red: #DC2626; /* Red text */
+  --text-blue-hover: #1D4ED8; /* Blue link hover */
+  --text-gray-hover: #4B5563; /* Gray text hover */
+  --text-white: #FFFFFF; /* White text (for buttons, etc.) */
+
+
+  /* Borders */
+  --border-light: #D1D5DB; /* Light gray border */
+  --border-dark: #4B5563; /* Dark gray border (for dark mode elements in light mode) */
+  --border-focus-blue: #3B82F6; /* Blue focus border */
+
+  /* Other */
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Theme Variables (Overrides for when data-theme="dark" is present) */
+html[data-theme='dark'] {
+  /* Backgrounds */
+  --bg-primary: #111827; /* Dark page background */
+  --bg-card: #1F2937;    /* Dark card/panel background */
+  --bg-button-secondary: #374151; /* Dark gray button background */
+  --bg-input: #374151;   /* Dark input background */
+  --bg-table-header: #374151; /* Dark table header background */
+  --bg-green-status: #10B981; /* Dark green status background */
+  --bg-yellow-status: #F59E0B; /* Dark yellow status background */
+  --bg-gray-button-hover: #4B5563; /* Dark gray button hover */
+  --bg-blue-hover: #1D4ED8; /* Dark blue button hover */
+  --bg-green-hover: #059669; /* Dark green button hover */
+
+  /* Text Colors */
+  --text-primary: #F9FAFB; /* Light text for dark mode */
+  --text-secondary: #D1D5DB; /* Lighter gray text */
+  --text-placeholder: #9CA3AF; /* Lighter placeholder text */
+  --text-link: #60A5FA; /* Lighter blue link text */
+  --text-green: #A7F3D0; /* Lighter green text */
+  --text-red: #F87171; /* Lighter red text */
+  --text-blue-hover: #3B82F6; /* Dark blue link hover */
+  --text-gray-hover: #9CA3AF; /* Lighter gray text hover */
+  --text-white: #FFFFFF; /* White text (for buttons, etc.) */
+
+  /* Borders */
+  --border-light: #4B5563; /* Darker gray border */
+  --border-dark: #6B7280; /* Even darker gray border */
+  --border-focus-blue: #60A5FA; /* Lighter blue focus border */
+
+  /* Other */
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+/* --- General CSS for font and basic elements --- */
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Set initial background from CSS variable */
+  background-color: var(--bg-primary);
+  transition: background-color 0.2s ease-in-out; /* Smooth transition for background */
+}
+
+html {
+  line-height: 1.5;
+}
+
+/* Custom scrollbar styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-primary); /* Use theme variable */
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-light); /* Use theme variable */
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--border-dark); /* Use theme variable */
+}
+
+/* Utility for no scrollbar (still needed) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
