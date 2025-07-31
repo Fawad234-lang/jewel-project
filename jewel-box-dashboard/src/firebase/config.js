@@ -3,20 +3,34 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Your Firebase configuration (ensure this is correct)
+// Retrieve Firebase configuration from environment variables
+// For Vite (which your project uses), environment variables are prefixed with VITE_
 const firebaseConfig = {
-  apiKey: "AIzaSyCqvfyCSkINeNqIj9_X74MUn6sWyLkjbIg",
-  authDomain: "jewel-box-dashboard.firebaseapp.com",
-  projectId: "jewel-box-dashboard",
-  storageBucket: "jewel-box-dashboard.firebasestorage.app",
-  messagingSenderId: "544308371060",
-  appId: "1:544308371060:web:3377471e052e5e15fbbb21",
-  measurementId: "G-QND4G8VTZG"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID // Optional
 };
+
+// Basic check to ensure environment variables are loaded
+// This helps prevent a blank page if variables are missing in development or production
+if (
+  !firebaseConfig.apiKey ||
+  !firebaseConfig.authDomain ||
+  !firebaseConfig.projectId ||
+  !firebaseConfig.appId
+) {
+  console.error("Firebase environment variables are missing or incorrectly configured!");
+  // In a production app, you might want to display a user-friendly error message here
+  // or redirect to an error page.
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-export { auth, db };
+export { auth, db, app }; // Export 'app' as well, it's often useful
