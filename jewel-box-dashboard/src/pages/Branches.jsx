@@ -20,8 +20,13 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // This removes any trailing slash from the URL for clean concatenation.
-  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+  // Define the base URL from environment variables.
+  // This will be "http://localhost:5000" in development.
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Define the fixed API path for all environments as requested.
+  // This path must be configured on your backend server.
+  const API_ENDPOINT_PATH = '/api/branches';
 
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
@@ -32,9 +37,8 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // FIX: The URL is now correctly pointing to the /branches endpoint,
-        // which seems to be what your Railway backend is expecting.
-        const url = `${API_BASE_URL}/branches`;
+        // Use the consistent API path for fetching branches.
+        const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -44,7 +48,7 @@ const Branches = () => {
         showToast("Branches loaded successfully!", "success");
       } catch (err) {
         console.error("Failed to fetch branches:", err);
-        setError("Failed to load branches. Please ensure the backend server is running.");
+        setError("Failed to load branches. Please ensure the backend server is running and configured for the /api/branches path.");
         showToast("Failed to load branches!", "error");
       } finally {
         setLoading(false);
@@ -61,8 +65,8 @@ const Branches = () => {
       contact: '0987654321',
     };
     try {
-      // FIX: Using the correct endpoint: /branches
-      const url = `${API_BASE_URL}/branches`;
+      // Use the consistent API path for adding a new branch.
+      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -98,8 +102,8 @@ const Branches = () => {
     }
     
     try {
-      // FIX: Using the correct endpoint: /branches/${id}
-      const url = `${API_BASE_URL}/branches/${editBranchId}`;
+      // Use the consistent API path for editing a branch.
+      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${editBranchId}`;
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -135,8 +139,8 @@ const Branches = () => {
   
   const performDelete = async (id) => {
     try {
-      // FIX: Using the correct endpoint: /branches/${id}
-      const url = `${API_BASE_URL}/branches/${id}`;
+      // Use the consistent API path for deleting a branch.
+      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
       });
@@ -185,7 +189,9 @@ const Branches = () => {
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Name</th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Location</th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Contact</th>
-                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Actions</th>
+                    <th scope="col" className="relative px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                        <span className="sr-only">Actions</span>Actions
+                    </th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Inventory</th>
                   </tr>
                 </thead>
