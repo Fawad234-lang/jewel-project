@@ -1,244 +1,396 @@
-// src/pages/Users.jsx
+// src/pages/Branches.jsx
+
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { PlusIcon, PencilSquareIcon, TrashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline';
 
-const Users = () => {
+const Branches = () => {
+  // States for general data and UI
   const { isDarkMode } = useTheme();
   const { showToast } = useToast();
-  const [usersData, setUsersData] = useState([]);
+  const [branchesData, setBranchesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // --- Set Page Title ---
+  // States for Modals and Confirmations
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBranchId, setEditBranchId] = useState(null);
+  const [editBranchData, setEditBranchData] = useState({ name: '', location: '', contact: '' });
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newBranchData, setNewBranchData] = useState({ name: '', location: '', contact: '' });
+
+  // This will read the environment variable set in Vercel.
+  // The .replace(/\/$/, '') part ensures no double slashes.
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
   useEffect(() => {
-    document.title = "Users - Jewel Box App";
+    document.title = "Branches - Jewel Box App";
   }, []);
 
-  // --- Fetch Users from Backend ---
+  // --- Fetch Branches from Backend ---
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchBranches = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:5000/api/users'); // Your backend API URL
+        const url = `${API_BASE_URL}/api/branches`;
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        setUsersData(data);
-        showToast("Users loaded successfully!", "success");
+        setBranchesData(data);
+        showToast("Branches loaded successfully!", "success");
       } catch (err) {
-        console.error("Failed to fetch users:", err);
-        setError("Failed to load users. Please ensure the backend server is running and data is seeded.");
-        showToast(`Failed to load users: ${err.message}`, "error");
+        console.error("Failed to fetch branches:", err);
+        setError("Failed to load branches. Please ensure the backend server is running and accessible.");
+        showToast("Failed to load branches!", "error");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
-  }, [showToast]);
+    fetchBranches();
+  }, [showToast, API_BASE_URL]);
 
-  const handleAddUser = async () => {
-    // In a real app, you'd have a form for this
-    const name = prompt("Enter user name:");
-    const email = prompt("Enter user email:");
-    const password = prompt("Enter user password:");
-    const role = prompt("Enter user role (Admin, Warehouse Manager, Branch Manager, Assistant Manager):");
-    const phone = prompt("Enter user phone:");
+  // --- Add Branch functionality with a modal ---
+  const handleAddModalOpen = () => {
+    setNewBranchData({ name: '', location: '', contact: '' });
+    setShowAddModal(true);
+  };
 
-    if (!name || !email || !password || !role || !phone) {
-      showToast("All fields are required to add a user.", "error");
+  const handleAddModalClose = () => {
+    setShowAddModal(false);
+    setNewBranchData({ name: '', location: '', contact: '' });
+  };
+
+  const handleAddBranchSubmit = async () => {
+    if (!newBranchData.name || !newBranchData.location || !newBranchData.contact) {
+      showToast("All fields are required to add a branch.", "error");
       return;
     }
-
-    const newUser = { name, email, password, role, phone };
-
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
+      const url = `${API_BASE_URL}/api/branches`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify(newBranchData),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const addedUser = await response.json();
-      setUsersData((prevData) => [...prevData, addedUser]);
-      showToast("User added successfully!", "success");
+      const addedBranch = await response.json();
+      setBranchesData((prevData) => [...prevData, addedBranch]);
+      showToast("Branch added successfully!", "success");
     } catch (err) {
-      console.error("Failed to add user:", err);
-      showToast(`Failed to add user: ${err.message}`, "error");
+      console.error("Failed to add branch:", err);
+      showToast("Failed to add branch!", "error");
+    } finally {
+      handleAddModalClose();
     }
   };
 
-  const handleEdit = async (id) => {
-    const currentUser = usersData.find(u => u._id === id);
-    if (!currentUser) return;
+  // --- Edit Branch functionality with a modal ---
+  const handleEdit = (id) => {
+    const branchToEdit = branchesData.find(b => b._id === id);
+    if (!branchToEdit) return;
+    
+    setEditBranchId(id);
+    setEditBranchData(branchToEdit);
+    setIsEditing(true);
+  };
 
-    const newName = prompt("Enter new name:", currentUser.name);
-    const newEmail = prompt("Enter new email:", currentUser.email);
-    const newRole = prompt("Enter new role:", currentUser.role);
-    const newPhone = prompt("Enter new phone:", currentUser.phone);
-
-    if (!newName || !newEmail || !newRole || !newPhone) {
-      showToast("All fields are required for update.", "error");
+  const handleEditSubmit = async () => {
+    if (!editBranchData.name) {
+      showToast("Branch name cannot be empty.", "error");
       return;
     }
-
-    const updatedFields = {
-      name: newName,
-      email: newEmail,
-      role: newRole,
-      phone: newPhone,
-      // Password is not typically updated via a prompt for security reasons
-      // If password needs to be updated, it should be a separate secure flow
-    };
-
+    
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const url = `${API_BASE_URL}/api/branches/${editBranchId}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedFields),
+        body: JSON.stringify(editBranchData),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const updatedUser = await response.json();
-      setUsersData((prevData) =>
-        prevData.map((user) =>
-          user._id === id ? updatedUser : user
+      const updatedBranch = await response.json();
+      setBranchesData((prevData) =>
+        prevData.map((branch) =>
+          branch._id === editBranchId ? updatedBranch : branch
         )
       );
-      showToast("User updated successfully!", "success");
+      showToast("Branch updated successfully!", "success");
     } catch (err) {
-      console.error("Failed to update user:", err);
-      showToast(`Failed to update user: ${err.message}`, "error");
+      console.error("Failed to update branch:", err);
+      showToast("Failed to update branch!", "error");
+    } finally {
+      setIsEditing(false);
+      setEditBranchId(null);
+      setEditBranchData({ name: '', location: '', contact: '' });
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) {
-      return;
-    }
+  // --- Delete Branch functionality with a custom confirmation modal ---
+  const handleDelete = (id) => {
+    setConfirmAction(() => () => performDelete(id));
+    setConfirmMessage("Are you sure you want to delete this branch?");
+    setShowConfirm(true);
+  };
+  
+  const performDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const url = `${API_BASE_URL}/api/branches/${id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      setUsersData((prevData) => prevData.filter((user) => user._id !== id));
-      showToast("User deleted successfully!", "success");
+      setBranchesData((prevData) => prevData.filter((branch) => branch._id !== id));
+      showToast("Branch deleted successfully!", "success");
     } catch (err) {
-      console.error("Failed to delete user:", err);
-      showToast(`Failed to delete user: ${err.message}`, "error");
+      console.error("Failed to delete branch:", err);
+      showToast("Failed to delete branch!", "error");
+    } finally {
+      setShowConfirm(false);
+      setConfirmAction(null);
     }
+  };
+
+  const handleInventoryClick = (branchId) => {
+    showToast(`Navigating to inventory for branch ID: ${branchId}`, "info");
+    // In a real application, you would navigate to a new route here.
+    // e.g., navigate(`/inventory/${branchId}`);
   };
 
   const tableHeaderClasses = "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider";
   const tableCellClasses = "px-6 py-4 whitespace-nowrap text-sm";
 
-  // Filter users by role for display
-  const admins = usersData.filter(user => user.role === 'Admin');
-  const warehouseManagers = usersData.filter(user => user.role === 'Warehouse Manager');
-  const branchManagers = usersData.filter(user => user.role === 'Branch Manager');
-  const assistantManagers = usersData.filter(user => user.role === 'Assistant Manager');
-
-
-  const renderUserTable = (users, title) => (
-    <div className="bg-white p-6 rounded-lg shadow-md mt-6 transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
-      <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</h2>
-      {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Loading users...</p>
-      ) : error ? (
-        <p style={{ color: 'var(--text-red)' }}>Error: {error}</p>
-      ) : users.length === 0 ? (
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No {title.toLowerCase()} found.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y" style={{ borderColor: 'var(--border-light)' }}>
-            <thead style={{ backgroundColor: 'var(--bg-table-header)' }}>
-              <tr>
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Name</th>
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Role</th>
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Email</th>
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Phone Number</th>
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Password</th> {/* Note: Displaying password is not secure in real apps */}
-                <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}> {/* Fixed: Removed extra '}' */}
-              {users.map((user) => (
-                <tr key={user._id}>
-                  <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{user.name}</td>
-                  <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{user.role}</td>
-                  <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{user.email}</td>
-                  <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{user.phone}</td>
-                  <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{user.password}</td>
-                  <td className={tableCellClasses}>
-                    <div className="flex items-center space-x-2">
-                      <button onClick={() => handleEdit(user._id)} className="text-blue-500 hover:text-blue-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.75" />
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDelete(user._id)} className="text-red-500 hover:text-red-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.262 9m10.118-3.468a.75.75 0 0 0 0-1.06L18.47 3.22a.75.75 0 0 0-1.06 0l-1.06 1.06M16.5 7.5h-9m9 0H12m-2.25 4.5h3.5m-3.5 0a.75.75 0 0 1-.75.75h-.75a.75.75 0 0 1-.75-.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.5h-15V21a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>User Management</h1>
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Branches</h1>
           <button
-            onClick={handleAddUser}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out"
+            onClick={handleAddModalOpen}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out flex items-center gap-2"
           >
-            Add New User
+            <PlusIcon className="w-4 h-4" />
+            Add New Branch
           </button>
         </div>
 
-        {renderUserTable(admins, "Admins")}
-        {renderUserTable(warehouseManagers, "Warehouse Managers")}
-        {renderUserTable(branchManagers, "Branch Managers")}
-        {renderUserTable(assistantManagers, "Assistant Managers")}
-
-        {/* Pagination Placeholder */}
-        <div className="flex justify-between items-center mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-          <span>{usersData.length > 0 ? `1 to ${usersData.length} of ${usersData.length}` : '0 to 0 of 0'}</span>
-          <div className="flex items-center space-x-2">
-            <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Previous</button>
-            <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Next</button>
+        <div className="bg-white p-6 rounded-lg shadow-md transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
+          {loading ? (
+            <p style={{ color: 'var(--text-secondary)' }}>Loading branches...</p>
+          ) : error ? (
+            <p className="text-center p-4 rounded-md" style={{ color: 'var(--text-red)', backgroundColor: 'var(--bg-danger-light)' }}>Error: {error}</p>
+          ) : branchesData.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)' }}>No branches found. Add one!</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y" style={{ borderColor: 'var(--border-light)' }}>
+                <thead style={{ backgroundColor: 'var(--bg-table-header)' }}>
+                  <tr>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Name</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Location</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Contact</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Actions</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Inventory</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}>
+                  {branchesData.map((branch) => (
+                    <tr key={branch._id}>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{branch.name}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{branch.location}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{branch.contact}</td>
+                      <td className={tableCellClasses}>
+                        <div className="flex items-center space-x-2">
+                          <button onClick={() => handleEdit(branch._id)} className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                            <PencilSquareIcon className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDelete(branch._id)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className={tableCellClasses}>
+                        <button onClick={() => handleInventoryClick(branch._id)} className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                            <ArchiveBoxIcon className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex justify-between items-center mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <span>{branchesData.length > 0 ? `1 to ${branchesData.length} of ${branchesData.length}` : '0 to 0 of 0'}</span>
+            <div className="flex items-center space-x-2">
+              <button disabled className="px-3 py-1 border rounded-md cursor-not-allowed opacity-50" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Previous</button>
+              <button disabled className="px-3 py-1 border rounded-md cursor-not-allowed opacity-50" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Next</button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl min-w-[300px]" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <p className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>{confirmMessage}</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Branch Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl min-w-[400px]" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Edit Branch Details</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="edit-name" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Branch Name</label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  value={editBranchData.name}
+                  onChange={(e) => setEditBranchData({ ...editBranchData, name: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-location" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Location</label>
+                <input
+                  id="edit-location"
+                  type="text"
+                  value={editBranchData.location}
+                  onChange={(e) => setEditBranchData({ ...editBranchData, location: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-contact" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Contact</label>
+                <input
+                  id="edit-contact"
+                  type="text"
+                  value={editBranchData.contact}
+                  onChange={(e) => setEditBranchData({ ...editBranchData, contact: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Branch Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl min-w-[400px]" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Add New Branch</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="add-name" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Branch Name</label>
+                <input
+                  id="add-name"
+                  type="text"
+                  value={newBranchData.name}
+                  onChange={(e) => setNewBranchData({ ...newBranchData, name: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="add-location" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Location</label>
+                <input
+                  id="add-location"
+                  type="text"
+                  value={newBranchData.location}
+                  onChange={(e) => setNewBranchData({ ...newBranchData, location: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="add-contact" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Contact</label>
+                <input
+                  id="add-contact"
+                  type="text"
+                  value={newBranchData.contact}
+                  onChange={(e) => setNewBranchData({ ...newBranchData, contact: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={handleAddModalClose}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddBranchSubmit}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   );
 };
 
-export default Users;
+export default Branches;
