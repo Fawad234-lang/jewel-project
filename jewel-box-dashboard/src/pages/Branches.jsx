@@ -1,5 +1,6 @@
 // src/pages/Branches.jsx
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
@@ -11,18 +12,30 @@ const Branches = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // --- Set Page Title ---
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBranchId, setEditBranchId] = useState(null);
+  const [newBranchName, setNewBranchName] = useState('');
+
+  // The VITE_API_URL is now used directly without any string manipulation.
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
   }, []);
 
-  // --- Fetch Branches from Backend ---
   useEffect(() => {
     const fetchBranches = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:5000/api/branches'); // Your backend API URL
+        // FIX: Construct the URL to avoid double slashes.
+        // It checks if the base URL ends with a slash and adds one if needed.
+        const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -39,7 +52,7 @@ const Branches = () => {
     };
 
     fetchBranches();
-  }, [showToast]);
+  }, [showToast, API_BASE_URL]);
 
   const handleAddBranch = async () => {
     const newBranch = {
@@ -48,7 +61,8 @@ const Branches = () => {
       contact: '0987654321',
     };
     try {
-      const response = await fetch('http://localhost:5000/api/branches', {
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,16 +82,28 @@ const Branches = () => {
   };
 
   const handleEdit = async (id) => {
-    const updatedName = prompt("Enter new name for branch:", branchesData.find(b => b._id === id)?.name);
-    if (!updatedName) return;
+    const branchToEdit = branchesData.find(b => b._id === id);
+    if (!branchToEdit) return;
+    
+    setEditBranchId(id);
+    setNewBranchName(branchToEdit.name);
+    setIsEditing(true);
+  };
 
+  const submitEdit = async () => {
+    if (!newBranchName || !editBranchId) {
+      showToast("Branch name cannot be empty.", "error");
+      return;
+    }
+    
     try {
-      const response = await fetch(`http://localhost:5000/api/branches/${id}`, {
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${editBranchId}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: updatedName }),
+        body: JSON.stringify({ name: newBranchName }),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -85,22 +111,30 @@ const Branches = () => {
       const updatedBranch = await response.json();
       setBranchesData((prevData) =>
         prevData.map((branch) =>
-          branch._id === id ? updatedBranch : branch
+          branch._id === editBranchId ? updatedBranch : branch
         )
       );
       showToast("Branch updated successfully!", "success");
     } catch (err) {
       console.error("Failed to update branch:", err);
       showToast("Failed to update branch!", "error");
+    } finally {
+      setIsEditing(false);
+      setEditBranchId(null);
+      setNewBranchName('');
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this branch?")) {
-      return;
-    }
+  const handleDelete = (id) => {
+    setConfirmAction(() => () => performDelete(id));
+    setConfirmMessage("Are you sure you want to delete this branch?");
+    setShowConfirm(true);
+  };
+  
+  const performDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/branches/${id}`, {
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -111,6 +145,9 @@ const Branches = () => {
     } catch (err) {
       console.error("Failed to delete branch:", err);
       showToast("Failed to delete branch!", "error");
+    } finally {
+      setShowConfirm(false);
+      setConfirmAction(null);
     }
   };
 
@@ -171,10 +208,10 @@ const Branches = () => {
                         </div>
                       </td>
                       <td className={tableCellClasses}>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.75a.75.75 0 0 0 0-1.06L18.47 4.47a.75.75 0 0 0-1.06 0l-1.06 1.06M16.5 7.5h-9m9 0H12m-2.25 4.5h3.5m-3.5 0a.75.75 0 0 1-.75.75h-.75a.75.75 0 0 1-.75-.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.5h-15V21a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />
-                          </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-500">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.75a.75.75 0 0 0 0-1.06L18.47 4.47a.75.75 0 0 0-1.06 0l-1.06 1.06M16.5 7.5h-9m9 0H12m-2.25 4.5h3.5m-3.5 0a.75.75 0 0 1-.75.75h-.75a.75.75 0 0 1-.75-.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.5h-15V21a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />
+                        </svg>
                       </td>
                     </tr>
                   ))}
@@ -182,7 +219,6 @@ const Branches = () => {
               </table>
             </div>
           )}
-          {/* Pagination Placeholder (will need backend integration later) */}
           <div className="flex justify-between items-center mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>{branchesData.length > 0 ? `1 to ${branchesData.length} of ${branchesData.length}` : '0 to 0 of 0'}</span>
             <div className="flex items-center space-x-2">
@@ -192,6 +228,57 @@ const Branches = () => {
           </div>
         </div>
       </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <p className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>{confirmMessage}</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Edit Branch Name</h3>
+            <input
+              type="text"
+              value={newBranchName}
+              onChange={(e) => setNewBranchName(e.target.value)}
+              className="w-full px-3 py-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            />
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
