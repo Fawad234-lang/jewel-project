@@ -1,4 +1,3 @@
-// src/pages/Expenses.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
@@ -30,7 +29,8 @@ const Expenses = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:5000/api/expenses'); // Your backend API URL
+        // NOTE: The API URL is hardcoded for a local server. You will need to change this for a production environment.
+        const response = await fetch('http://localhost:5000/api/expenses');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
