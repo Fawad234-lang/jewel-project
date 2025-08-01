@@ -1,232 +1,182 @@
 // src/pages/Products.jsx
+
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
-import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 
-// --- Reusable Modal Component ---
-// You should move this component to its own file, e.g., 'src/components/Modal.jsx'
-const Modal = ({ isOpen, title, onClose, children, actions }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg mx-4 transform transition-all duration-300 scale-95 md:scale-100">
-        <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="py-4 text-gray-700 dark:text-gray-300">
-          {children}
-        </div>
-        <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-          {actions}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- Main Products Component ---
 const Products = () => {
   const { isDarkMode } = useTheme();
   const { showToast } = useToast();
-
-  const API_BASE_URL = 'http://localhost:5000/api';
-
   const [productsData, setProductsData] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [deletingProductId, setDeletingProductId] = useState(null);
+  // State for delete confirmation modal
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
-  // Form state for add/edit
-  const [formState, setFormState] = useState({
-    name: '',
-    categoryId: '',
-    subcategoryId: '',
-    price: '',
-    stock: '',
-    description: ''
-  });
+  // State for edit modal
+  const [isEditing, setIsEditing] = useState(false);
+  const [editProductId, setEditProductId] = useState(null);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
 
-  // --- Set Page Title ---
+  // This will read the environment variable set in Vercel.
+  // The .replace(/\/$/, '') part ensures no double slashes.
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
   useEffect(() => {
+    // Set the document title for the browser tab
     document.title = "Products - Jewel Box App";
   }, []);
 
-  // --- Fetch Products, Categories, and Subcategories from Backend ---
-  const fetchData = async () => {
+  // Effect hook to fetch products when the component mounts
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Correctly construct the URL using the base URL and the /api/products endpoint
+        const url = `${API_BASE_URL}/api/products`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setProductsData(data);
+        showToast("Products loaded successfully!", "success");
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+        setError("Failed to load products. Please ensure the backend server is running and accessible.");
+        showToast("Failed to load products!", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [showToast, API_BASE_URL]);
+
+  // Handler for adding a new product
+  const handleAddProduct = async () => {
+    // Create a new product object with dummy data
+    const newProduct = {
+      name: `New Product ${Math.floor(Math.random() * 1000)}`,
+      price: Math.floor(Math.random() * 500) + 50,
+      stock: Math.floor(Math.random() * 100),
+    };
     try {
-      setLoading(true);
-      setError(null);
-
-      const [productsResponse, categoriesResponse, subcategoriesResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/products`),
-        fetch(`${API_BASE_URL}/categories`),
-        fetch(`${API_BASE_URL}/subcategories`)
-      ]);
-
-      if (!productsResponse.ok) throw new Error(`HTTP error! status: ${productsResponse.status} for products`);
-      if (!categoriesResponse.ok) throw new Error(`HTTP error! status: ${categoriesResponse.status} for categories`);
-      if (!subcategoriesResponse.ok) throw new Error(`HTTP error! status: ${subcategoriesResponse.status} for subcategories`);
-
-      const products = await productsResponse.json();
-      const categories = await categoriesResponse.json();
-      const subcategories = await subcategoriesResponse.json();
-
-      setProductsData(products);
-      setCategories(categories);
-      setSubcategories(subcategories);
-
-      showToast("Products, Categories, and Subcategories loaded successfully!", "success");
+      const url = `${API_BASE_URL}/api/products`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newProduct),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const addedProduct = await response.json();
+      // Update the state with the newly added product
+      setProductsData((prevData) => [...prevData, addedProduct]);
+      showToast("Product added successfully!", "success");
     } catch (err) {
-      console.error("Failed to fetch data:", err);
-      setError("Failed to load products or related data. Please ensure the backend server is running and data is seeded.");
-      showToast(`Failed to load data: ${err.message}`, "error");
-    } finally {
-      setLoading(false);
+      console.error("Failed to add product:", err);
+      showToast("Failed to add product!", "error");
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Handler to prepare the edit modal with the selected product's data
+  const handleEdit = (id) => {
+    const productToEdit = productsData.find(p => p._id === id);
+    if (!productToEdit) return;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormState(prevState => ({ ...prevState, [name]: value }));
+    setEditProductId(id);
+    setNewProductName(productToEdit.name);
+    setNewProductPrice(productToEdit.price);
+    setNewProductStock(productToEdit.stock);
+    setIsEditing(true);
   };
 
-  const handleOpenAddModal = () => {
-    setEditingProduct(null);
-    setFormState({ name: '', categoryId: '', subcategoryId: '', price: '', stock: '', description: '' });
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (product) => {
-    setEditingProduct(product);
-    setFormState({
-      name: product.name,
-      categoryId: product.category?._id || '',
-      subcategoryId: product.subcategory?._id || '',
-      price: product.price,
-      stock: product.stock,
-      description: product.description || ''
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingProduct(null);
-    setFormState({ name: '', categoryId: '', subcategoryId: '', price: '', stock: '', description: '' });
-  };
-
-  const handleOpenDeleteModal = (id) => {
-    setDeletingProductId(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setDeletingProductId(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const { name, categoryId, subcategoryId, price, stock, description } = formState;
-
-    if (!name || !categoryId || !subcategoryId || !price || !stock) {
-      showToast("All required fields must be filled correctly.", "error");
+  // Handler to submit the edited product data
+  const submitEdit = async () => {
+    if (!newProductName) {
+      showToast("Product name cannot be empty.", "error");
       return;
     }
 
-    const payload = {
-      name,
-      category: categoryId,
-      subcategory: subcategoryId,
-      price: parseFloat(price),
-      stock: parseInt(stock),
-      description,
-    };
-
     try {
-      let response;
-      if (editingProduct) {
-        // Handle edit (PUT request)
-        response = await fetch(`${API_BASE_URL}/products/${editingProduct._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        // Handle add (POST request)
-        response = await fetch(`${API_BASE_URL}/products`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      }
-
+      const url = `${API_BASE_URL}/api/products/${editProductId}`;
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newProductName,
+          price: parseFloat(newProductPrice), // Convert to float
+          stock: parseInt(newProductStock, 10), // Convert to int
+        }),
+      });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const result = await response.json();
-      if (editingProduct) {
-        setProductsData((prevData) =>
-          prevData.map((product) => product._id === result._id ? result : product)
-        );
-        showToast("Product updated successfully!", "success");
-      } else {
-        setProductsData((prevData) => [...prevData, result]);
-        showToast("Product added successfully!", "success");
-      }
-      handleCloseModal();
+      const updatedProduct = await response.json();
+      // Update the state with the modified product
+      setProductsData((prevData) =>
+        prevData.map((product) =>
+          product._id === editProductId ? updatedProduct : product
+        )
+      );
+      showToast("Product updated successfully!", "success");
     } catch (err) {
-      console.error("Failed to save product:", err);
-      showToast(`Failed to save product: ${err.message}`, "error");
+      console.error("Failed to update product:", err);
+      showToast("Failed to update product!", "error");
+    } finally {
+      // Reset the edit state
+      setIsEditing(false);
+      setEditProductId(null);
+      setNewProductName('');
+      setNewProductPrice('');
+      setNewProductStock('');
     }
   };
 
-  const handleDelete = async () => {
-    if (!deletingProductId) return;
+  // Handler to show the delete confirmation modal
+  const handleDelete = (id) => {
+    setConfirmAction(() => () => performDelete(id));
+    setConfirmMessage("Are you sure you want to delete this product?");
+    setShowConfirm(true);
+  };
+
+  // Handler to perform the actual delete operation
+  const performDelete = async (id) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${deletingProductId}`, {
+      const url = `${API_BASE_URL}/api/products/${id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      setProductsData((prevData) => prevData.filter((product) => product._id !== deletingProductId));
+      // Filter out the deleted product from the state
+      setProductsData((prevData) => prevData.filter((product) => product._id !== id));
       showToast("Product deleted successfully!", "success");
-      handleCloseDeleteModal();
     } catch (err) {
       console.error("Failed to delete product:", err);
-      showToast(`Failed to delete product: ${err.message}`, "error");
+      showToast("Failed to delete product!", "error");
+    } finally {
+      // Reset the confirmation state
+      setShowConfirm(false);
+      setConfirmAction(null);
     }
   };
 
-  // Filter subcategories based on the selected category
-  const filteredSubcategories = formState.categoryId
-    ? subcategories.filter(sub => sub.category?._id === formState.categoryId)
-    : [];
-
+  // Tailwind CSS classes for table headers and cells
   const tableHeaderClasses = "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider";
   const tableCellClasses = "px-6 py-4 whitespace-nowrap text-sm";
 
@@ -234,51 +184,51 @@ const Products = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Products</h1>
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Products</h1>
           <button
-            onClick={handleOpenAddModal}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out"
+            onClick={handleAddProduct}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out"
           >
-            <PlusCircle size={18} />
-            <span>Add New Product</span>
+            Add New Product
           </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
+        <div className="bg-white p-6 rounded-lg shadow-md transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
           {loading ? (
-            <p className="text-gray-500 dark:text-gray-400">Loading products...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Loading products...</p>
           ) : error ? (
-            <p className="text-red-600 dark:text-red-400">Error: {error}</p>
+            <p style={{ color: 'var(--text-red)' }}>Error: {error}</p>
           ) : productsData.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No products found. Add one!</p>
+            <p style={{ color: 'var(--text-secondary)' }}>No products found. Add one!</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y" style={{ borderColor: 'var(--border-light)' }}>
+                <thead style={{ backgroundColor: 'var(--bg-table-header)' }}>
                   <tr>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Name</th>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Category</th>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Subcategory</th>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Price</th>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Stock</th>
-                    <th scope="col" className={`${tableHeaderClasses} text-gray-500 dark:text-gray-300`}>Actions</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Name</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Price</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Stock</th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}>
                   {productsData.map((product) => (
                     <tr key={product._id}>
-                      <td className={`${tableCellClasses} text-gray-900 dark:text-white`}>{product.name}</td>
-                      <td className={`${tableCellClasses} text-gray-900 dark:text-white`}>{product.category ? product.category.name : 'N/A'}</td>
-                      <td className={`${tableCellClasses} text-gray-900 dark:text-white`}>{product.subcategory ? product.subcategory.name : 'N/A'}</td>
-                      <td className={`${tableCellClasses} text-gray-900 dark:text-white`}>Rs {product.price.toLocaleString('en-IN')}</td>
-                      <td className={`${tableCellClasses} text-gray-900 dark:text-white`}>{product.stock}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{product.name}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>${product.price}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{product.stock}</td>
                       <td className={tableCellClasses}>
                         <div className="flex items-center space-x-2">
-                          <button onClick={() => handleOpenEditModal(product)} className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400">
-                            <Pencil size={18} />
+                          <button onClick={() => handleEdit(product._id)} className="text-blue-500 hover:text-blue-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.75" />
+                            </svg>
                           </button>
-                          <button onClick={() => handleOpenDeleteModal(product._id)} className="text-red-500 hover:text-red-700 dark:hover:text-red-400">
-                            <Trash2 size={18} />
+                          <button onClick={() => handleDelete(product._id)} className="text-red-500 hover:text-red-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.262 9m10.118-3.468a.75.75 0 0 0 0-1.06L18.47 3.22a.75.75 0 0 0-1.06 0l-1.06 1.06M16.5 7.5h-9m9 0H12m-2.25 4.5h3.5m-3.5 0a.75.75 0 0 1-.75.75h-.75a.75.75 0 0 1-.75-.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.5h-15V21a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />
+                            </svg>
                           </button>
                         </div>
                       </td>
@@ -288,91 +238,97 @@ const Products = () => {
               </table>
             </div>
           )}
-          {/* Pagination Placeholder */}
-          <div className="flex justify-between items-center mt-4 text-sm text-gray-500 dark:text-gray-400">
+          {/* Pagination and summary (static for this example) */}
+          <div className="flex justify-between items-center mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>{productsData.length > 0 ? `1 to ${productsData.length} of ${productsData.length}` : '0 to 0 of 0'}</span>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Previous</button>
-              <button className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Next</button>
+              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Previous</button>
+              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Next</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add/Edit Product Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={editingProduct ? "Edit Product" : "Add New Product"}
-        actions={
-          <>
-            <button onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button onClick={handleSubmit} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
-              {editingProduct ? "Save Changes" : "Add Product"}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-            <input type="text" id="name" name="name" value={formState.name} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required />
-          </div>
-          <div>
-            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-            <select id="categoryId" name="categoryId" value={formState.categoryId} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required>
-              <option value="">-- Select a Category --</option>
-              {categories.map(cat => (
-                <option key={cat._id} value={cat._id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="subcategoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Subcategory</label>
-            <select id="subcategoryId" name="subcategoryId" value={formState.subcategoryId} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required disabled={!formState.categoryId}>
-              <option value="">-- Select a Subcategory --</option>
-              {filteredSubcategories.map(sub => (
-                <option key={sub._id} value={sub._id}>{sub.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Price</label>
-              <input type="number" id="price" name="price" value={formState.price} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required min="0" step="0.01" />
-            </div>
-            <div>
-              <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Stock</label>
-              <input type="number" id="stock" name="stock" value={formState.stock} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" required min="0" />
-            </div>
-          </div>
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
-            <textarea id="description" name="description" value={formState.description} onChange={handleInputChange} rows="3" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
-          </div>
-        </form>
-      </Modal>
-
       {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={handleCloseDeleteModal}
-        title="Confirm Deletion"
-        actions={
-          <>
-            <button onClick={handleCloseDeleteModal} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700">
-              Cancel
-            </button>
-            <button onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
-              Delete
-            </button>
-          </>
-        }
-      >
-        <p>Are you sure you want to delete this product? This action cannot be undone.</p>
-      </Modal>
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <p className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>{confirmMessage}</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Edit Product</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="product-name" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Product Name</label>
+                <input
+                  id="product-name"
+                  type="text"
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="product-price" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Price</label>
+                <input
+                  id="product-price"
+                  type="number"
+                  value={newProductPrice}
+                  onChange={(e) => setNewProductPrice(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="product-stock" className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Stock</label>
+                <input
+                  id="product-stock"
+                  type="number"
+                  value={newProductStock}
+                  onChange={(e) => setNewProductStock(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
