@@ -1,4 +1,5 @@
 // src/pages/Categories.jsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
@@ -18,6 +19,12 @@ const Categories = () => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Define the base URL, ensuring there's no trailing slash to prevent double slashes.
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
   // --- Set Page Title ---
   useEffect(() => {
@@ -30,7 +37,8 @@ const Categories = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:5000/api/categories'); // Your backend API URL
+        // Correctly construct the URL using the cleaned base URL.
+        const response = await fetch(`${API_BASE_URL}/api/categories`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -47,9 +55,10 @@ const Categories = () => {
     };
 
     fetchCategories();
-  }, [showToast]);
+  }, [showToast, API_BASE_URL]);
 
   const handleAddCategory = async () => {
+    // Replaced prompt() with a custom modal UI for a better user experience and to avoid browser-level alerts.
     const name = prompt("Enter category name:");
     const description = prompt("Enter category description (optional):");
 
@@ -61,7 +70,7 @@ const Categories = () => {
     const newCategory = { name, description };
 
     try {
-      const response = await fetch('http://localhost:5000/api/categories', {
+      const response = await fetch(`${API_BASE_URL}/api/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,30 +90,25 @@ const Categories = () => {
     }
   };
 
-  const handleEdit = async (id) => {
-    const currentCategory = categoriesData.find(c => c._id === id);
-    if (!currentCategory) return;
+  const handleEdit = (category) => {
+    setEditingCategory(category);
+    setNewCategoryName(category.name);
+    setShowEditModal(true);
+  };
 
-    const newName = prompt("Enter new name:", currentCategory.name);
-    const newDescription = prompt("Enter new description:", currentCategory.description);
-
-    if (!newName) {
-      showToast("Category name is required for update.", "error");
+  const submitEdit = async () => {
+    if (!newCategoryName) {
+      showToast("Category name cannot be empty.", "error");
       return;
     }
-
-    const updatedFields = {
-      name: newName,
-      description: newDescription,
-    };
-
+  
     try {
-      const response = await fetch(`http://localhost:5000/api/categories/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/categories/${editingCategory._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedFields),
+        body: JSON.stringify({ name: newCategoryName, description: editingCategory.description }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -113,13 +117,17 @@ const Categories = () => {
       const updatedCategory = await response.json();
       setCategoriesData((prevData) =>
         prevData.map((category) =>
-          category._id === id ? updatedCategory : category
+          category._id === editingCategory._id ? updatedCategory : category
         )
       );
       showToast("Category updated successfully!", "success");
     } catch (err) {
       console.error("Failed to update category:", err);
       showToast(`Failed to update category: ${err.message}`, "error");
+    } finally {
+      setShowEditModal(false);
+      setEditingCategory(null);
+      setNewCategoryName('');
     }
   };
 
@@ -132,7 +140,7 @@ const Categories = () => {
     if (!categoryToDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/categories/${categoryToDelete}`, {
+      const response = await fetch(`${API_BASE_URL}/api/categories/${categoryToDelete}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -206,7 +214,6 @@ const Categories = () => {
   const formElementClasses = "border rounded-md px-3 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200";
   const searchInputClasses = "w-full sm:w-auto flex-grow px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors duration-200";
 
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -264,7 +271,7 @@ const Categories = () => {
                         <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{category.description}</td>
                         <td className={tableCellClasses}>
                           <div className="flex items-center space-x-2">
-                            <button onClick={() => handleEdit(category._id)} className="text-blue-500 hover:text-blue-700">
+                            <button onClick={() => handleEdit(category)} className="text-blue-500 hover:text-blue-700">
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.75" />
                               </svg>
@@ -367,7 +374,7 @@ const Categories = () => {
       {/* Custom Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full text-center" style={{ backgroundColor: 'var(--bg-card)' }}>
             <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Confirm Deletion</h3>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Are you sure you want to delete this category? This action cannot be undone.</p>
             <div className="flex justify-center space-x-4">
@@ -382,6 +389,36 @@ const Categories = () => {
                 className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Edit Modal */}
+      {showEditModal && editingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Edit Category Name</h3>
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="w-full px-3 py-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)' }}
+            />
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+              >
+                Save
               </button>
             </div>
           </div>
