@@ -1,5 +1,5 @@
 // backend/controllers/subcategoryController.js
-const Subcategory = require('../models/subcategoryModels'); // Ensure path is correct
+const Subcategory = require('../models/subCategoryModels'); // Ensure path is correct
 
 // @desc    Get all subcategories
 // @route   GET /api/subcategories
