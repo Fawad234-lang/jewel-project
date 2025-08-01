@@ -10,7 +10,7 @@ const subcategorySchema = mongoose.Schema(
     },
     category: {
       type: mongoose.Schema.Types.ObjectId, // Reference to the Category model
-      ref: 'Category', // The name of the model it refers to
+      ref: 'Category', // The name of the model it refers tos
       required: [true, 'Please select a parent category'],
     },
     description: {
