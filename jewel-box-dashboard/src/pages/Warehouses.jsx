@@ -11,11 +11,8 @@ import {
 } from 'lucide-react';
 
 const Warehouses = () => {
-  // Accessing the theme and toast contexts
   const { isDarkMode } = useTheme();
   const { showToast } = useToast();
-
-  // State for storing warehouse data, loading status, and errors
   const [warehousesData, setWarehousesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,10 +22,12 @@ const Warehouses = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentWarehouse, setCurrentWarehouse] = useState(null);
-  
-  // State for new and updated warehouse data
   const [newWarehouse, setNewWarehouse] = useState({ name: '', location: '', contact: '' });
   const [updatedWarehouse, setUpdatedWarehouse] = useState({ name: '', location: '', contact: '' });
+
+  // --- Dynamic API URL - This is the key fix ---
+  // It reads the environment variable set in Vercel or uses an empty string as a fallback.
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
   // --- Set Page Title ---
   useEffect(() => {
@@ -41,8 +40,9 @@ const Warehouses = () => {
       try {
         setLoading(true);
         setError(null);
-        // Using a mock API call for demonstration
-        const response = await fetch('http://localhost:5000/api/warehouses');
+        // Correctly construct the URL using the dynamic base URL.
+        const url = `${API_BASE_URL}/api/warehouses`;
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -51,25 +51,27 @@ const Warehouses = () => {
         showToast("Warehouses loaded successfully!", "success");
       } catch (err) {
         console.error("Failed to fetch warehouses:", err);
-        setError("Failed to load warehouses. Please ensure the backend server is running.");
+        setError("Failed to load warehouses. Please ensure the backend server is running and accessible.");
         showToast("Failed to load warehouses!", "error");
       } finally {
         setLoading(false);
       }
     };
+    // The dependency array now includes API_BASE_URL to ensure the effect reruns if the URL changes.
     fetchWarehouses();
-  }, [showToast]);
+  }, [showToast, API_BASE_URL]);
 
   // --- Handlers for CRUD operations ---
   const handleAddWarehouse = async () => {
-    // Basic validation
     if (!newWarehouse.name || !newWarehouse.location || !newWarehouse.contact) {
       showToast("All fields are required to add a warehouse.", "error");
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/warehouses', {
+      // Use the dynamic URL
+      const url = `${API_BASE_URL}/api/warehouses`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,14 +94,15 @@ const Warehouses = () => {
   };
 
   const handleEdit = async () => {
-    // Basic validation
     if (!updatedWarehouse.name || !updatedWarehouse.location || !updatedWarehouse.contact) {
       showToast("All fields are required for update.", "error");
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/warehouses/${currentWarehouse._id}`, {
+      // Use the dynamic URL
+      const url = `${API_BASE_URL}/api/warehouses/${currentWarehouse._id}`;
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +132,9 @@ const Warehouses = () => {
   const handleDelete = async () => {
     if (!currentWarehouse) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/warehouses/${currentWarehouse._id}`, {
+      // Use the dynamic URL
+      const url = `${API_BASE_URL}/api/warehouses/${currentWarehouse._id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -146,7 +151,6 @@ const Warehouses = () => {
     }
   };
 
-  // Helper functions to open modals
   const openEditModal = (warehouse) => {
     setCurrentWarehouse(warehouse);
     setUpdatedWarehouse({
@@ -162,7 +166,6 @@ const Warehouses = () => {
     setIsDeleteModalOpen(true);
   };
 
-  // Tailwind CSS classes for styling elements
   const tableHeaderClasses = "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider";
   const tableCellClasses = "px-6 py-4 whitespace-nowrap text-sm";
   const inputClasses = "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200";
@@ -171,7 +174,6 @@ const Warehouses = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4">
-        {/* Header section with page title and add button */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">Warehouses</h1>
           <button
@@ -183,7 +185,6 @@ const Warehouses = () => {
           </button>
         </div>
 
-        {/* Main content area for the warehouses table */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
           {loading ? (
             <p className="text-gray-500 dark:text-gray-400">Loading warehouses...</p>
@@ -234,7 +235,6 @@ const Warehouses = () => {
               </table>
             </div>
           )}
-          {/* Pagination/info section */}
           <div className="flex justify-between items-center mt-4 text-sm text-gray-500 dark:text-gray-400">
             <span>{warehousesData.length > 0 ? `Showing 1 to ${warehousesData.length} of ${warehousesData.length} entries` : 'No entries'}</span>
             <div className="flex items-center space-x-2">
@@ -247,7 +247,7 @@ const Warehouses = () => {
 
       {/* Add Warehouse Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add New Warehouse</h3>
@@ -292,7 +292,7 @@ const Warehouses = () => {
 
       {/* Edit Warehouse Modal */}
       {isEditModalOpen && currentWarehouse && (
-        <div className="fixed inset-0 z-50 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Warehouse</h3>
@@ -337,7 +337,7 @@ const Warehouses = () => {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && currentWarehouse && (
-        <div className="fixed inset-0 z-50 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Confirm Deletion</h3>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
