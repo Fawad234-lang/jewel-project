@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import StatCard from '../components/Shared/StatCard';
@@ -414,9 +413,9 @@ const Dashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full`}
                                  style={{
-                                   backgroundColor: order.status === 'Completed' ? 'var(--bg-green-status)' : 'var(--bg-yellow-status)',
-                                   color: order.status === 'Completed' ? 'var(--text-green)' : 'var(--text-red)'
-                                 }}>
+                                  backgroundColor: order.status === 'Completed' ? 'var(--bg-green-status)' : 'var(--bg-yellow-status)',
+                                  color: order.status === 'Completed' ? 'var(--text-green)' : 'var(--text-red)'
+                                }}>
                             {order.status}
                           </span>
                         </td>
@@ -632,7 +631,7 @@ const Dashboard = () => {
                 {totalSalesmanPages}
               </strong>
             </span>
-            <span className="flex flex-col sm:flex-row items-center gap-1 text-sm"> {/* Adjusted for small screens */}
+            <span className="flex flex-col sm:flex-row items-center gap-1 text-sm">
               | Go to page:{' '}
               <input
                 type="number"
@@ -665,46 +664,35 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Summary Stats */}
+        {/* GST Percentage Settings */}
         <div className="p-4 sm:p-6 rounded-lg shadow-md transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
-          <h2 className="text-xl sm:text-2xl font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>Summary Stats</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {summaryStats.map((stat, index) => (
-              <StatCard
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                isCurrency={stat.isCurrency}
-                // No change prop for summary stats as per provided data
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Tax Settings</h2>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex items-center w-full md:w-auto">
+              <label htmlFor="gst-percentage" className="text-sm font-medium mr-2 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
+                GST Percentage:
+              </label>
+              <input
+                id="gst-percentage"
+                type="number"
+                min="0"
+                max="100"
+                value={gstPercentage}
+                onChange={(e) => setGstPercentage(Number(e.target.value))}
+                className={`${gstInputClasses} w-20 text-center`}
+                style={{
+                  borderColor: 'var(--border-light)',
+                  backgroundColor: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
+                }}
               />
-            ))}
-          </div>
-        </div>
-
-        {/* Tax Settings */}
-        <div className="p-4 sm:p-6 rounded-lg shadow-md transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
-          <h2 className="text-xl sm:text-2xl font-semibold mb-6" style={{ color: 'var(--text-primary)' }}>Tax Settings</h2>
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <label htmlFor="gst-percentage" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-              GST Percentage:
-            </label>
-            <input
-              type="number"
-              id="gst-percentage"
-              value={gstPercentage}
-              onChange={(e) => setGstPercentage(parseFloat(e.target.value))}
-              className={gstInputClasses}
-              style={{
-                borderColor: 'var(--border-light)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-              }}
-            />
+              <span className="text-sm ml-2" style={{ color: 'var(--text-secondary)' }}>%</span>
+            </div>
             <button
               onClick={handleSaveTaxSettings}
-              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-purple-700 transition duration-150 ease-in-out w-full sm:w-auto"
+              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 w-full md:w-auto"
             >
-              Save Tax Settings
+              Save Tax
             </button>
           </div>
         </div>
