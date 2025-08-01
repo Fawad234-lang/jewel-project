@@ -1,39 +1,68 @@
-// src/pages/Subcategories.jsx
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  PlusIcon,
+  ArrowRightIcon,
+  ArrowLeftIcon
+} from '@heroicons/react/24/solid';
 
 const Subcategories = () => {
   const { isDarkMode } = useTheme();
   const { showToast } = useToast();
+
+  // State for subcategories and categories data
   const [subcategoriesData, setSubcategoriesData] = useState([]);
-  const [categories, setCategories] = useState([]); // To store categories for dropdown
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // --- Set Page Title ---
+  // State for adding a new subcategory
+  const [isAdding, setIsAdding] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [newSubcategoryCategoryId, setNewSubcategoryCategoryId] = useState('');
+  const [newSubcategoryDescription, setNewSubcategoryDescription] = useState('');
+
+  // State for editing a subcategory
+  const [isEditing, setIsEditing] = useState(false);
+  const [editSubcategoryId, setEditSubcategoryId] = useState(null);
+  const [editSubcategoryName, setEditSubcategoryName] = useState('');
+  const [editSubcategoryCategoryId, setEditSubcategoryCategoryId] = useState('');
+  const [editSubcategoryDescription, setEditSubcategoryDescription] = useState('');
+
+  // State for the confirmation modal (for deletion)
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+
+  // Environment variable for API URL
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+  // Set page title on component mount
   useEffect(() => {
     document.title = "Subcategories - Jewel Box App";
   }, []);
 
-  // --- Fetch Subcategories and Categories from Backend ---
+  // Fetch subcategories and categories from the backend
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch Subcategories
-        const subcategoriesResponse = await fetch('http://localhost:5000/api/subcategories');
+        const subcategoriesResponse = await fetch(`${API_BASE_URL}/api/subcategories`);
         if (!subcategoriesResponse.ok) {
           throw new Error(`HTTP error! status: ${subcategoriesResponse.status} for subcategories`);
         }
         const subcategoriesData = await subcategoriesResponse.json();
+        // The subcategory data from the backend might not be consistent with the category names.
+        // It is better to rely on the fetched categories data to get the names for rendering.
         setSubcategoriesData(subcategoriesData);
 
-        // Fetch Categories (for the dropdown in add/edit forms)
-        const categoriesResponse = await fetch('http://localhost:5000/api/categories');
+        const categoriesResponse = await fetch(`${API_BASE_URL}/api/categories`);
         if (!categoriesResponse.ok) {
           throw new Error(`HTTP error! status: ${categoriesResponse.status} for categories`);
         }
@@ -43,116 +72,123 @@ const Subcategories = () => {
         showToast("Subcategories and Categories loaded successfully!", "success");
       } catch (err) {
         console.error("Failed to fetch data:", err);
-        setError("Failed to load subcategories or categories. Please ensure the backend server is running and data is seeded.");
-        showToast(`Failed to load data: ${err.message}`, "error");
+        setError("Failed to load subcategories or categories. Please ensure the backend server is running and accessible.");
+        showToast("Failed to load data!", "error");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [showToast]);
+  }, [showToast, API_BASE_URL]);
 
+  // Handle opening the "add" modal
+  const handleOpenAddModal = () => {
+    setNewSubcategoryName('');
+    setNewSubcategoryCategoryId('');
+    setNewSubcategoryDescription('');
+    setIsAdding(true);
+  };
+
+  // Handle submission of a new subcategory
   const handleAddSubcategory = async () => {
-    const name = prompt("Enter subcategory name:");
-    // Prompt for category ID or name and then find ID
-    const categoryName = prompt("Enter parent category name (e.g., Jewellery, Electronics):");
-    const description = prompt("Enter subcategory description (optional):");
-
-    if (!name || !categoryName) {
+    if (!newSubcategoryName || !newSubcategoryCategoryId) {
       showToast("Subcategory name and parent category are required.", "error");
       return;
     }
 
-    const parentCategory = categories.find(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
-    if (!parentCategory) {
-      showToast("Parent category not found. Please enter an existing category name.", "error");
-      return;
-    }
-
     const newSubcategory = {
-      name,
-      category: parentCategory._id, // Send category ID to backend
-      description
+      name: newSubcategoryName,
+      category: newSubcategoryCategoryId,
+      description: newSubcategoryDescription,
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/subcategories', {
+      const url = `${API_BASE_URL}/api/subcategories`;
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSubcategory),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
       }
+
       const addedSubcategory = await response.json();
       setSubcategoriesData((prevData) => [...prevData, addedSubcategory]);
       showToast("Subcategory added successfully!", "success");
+      setIsAdding(false);
     } catch (err) {
       console.error("Failed to add subcategory:", err);
       showToast(`Failed to add subcategory: ${err.message}`, "error");
     }
   };
 
-  const handleEdit = async (id) => {
-    const currentSubcategory = subcategoriesData.find(s => s._id === id);
-    if (!currentSubcategory) return;
+  // Handle opening the "edit" modal
+  const handleOpenEditModal = (subcategory) => {
+    setEditSubcategoryId(subcategory._id);
+    setEditSubcategoryName(subcategory.name);
+    setEditSubcategoryCategoryId(subcategory.category?._id);
+    setEditSubcategoryDescription(subcategory.description);
+    setIsEditing(true);
+  };
 
-    const newName = prompt("Enter new name:", currentSubcategory.name);
-    const newCategoryName = prompt("Enter new parent category name:", currentSubcategory.category.name);
-    const newDescription = prompt("Enter new description:", currentSubcategory.description);
-
-    if (!newName || !newCategoryName) {
-      showToast("Subcategory name and parent category are required for update.", "error");
-      return;
-    }
-
-    const parentCategory = categories.find(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase());
-    if (!parentCategory) {
-      showToast("New parent category not found. Please enter an existing category name.", "error");
+  // Handle submission of the edited subcategory
+  const submitEdit = async () => {
+    if (!editSubcategoryName || !editSubcategoryCategoryId) {
+      showToast("Subcategory name and parent category are required.", "error");
       return;
     }
 
     const updatedFields = {
-      name: newName,
-      category: parentCategory._id, // Send category ID
-      description: newDescription,
+      name: editSubcategoryName,
+      category: editSubcategoryCategoryId,
+      description: editSubcategoryDescription,
     };
 
     try {
-      const response = await fetch(`http://localhost:5000/api/subcategories/${id}`, {
+      const url = `${API_BASE_URL}/api/subcategories/${editSubcategoryId}`;
+      const response = await fetch(url, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedFields),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message}`);
       }
+
       const updatedSubcategory = await response.json();
       setSubcategoriesData((prevData) =>
         prevData.map((subcategory) =>
-          subcategory._id === id ? updatedSubcategory : subcategory
+          subcategory._id === editSubcategoryId ? updatedSubcategory : subcategory
         )
       );
       showToast("Subcategory updated successfully!", "success");
     } catch (err) {
       console.error("Failed to update subcategory:", err);
       showToast(`Failed to update subcategory: ${err.message}`, "error");
+    } finally {
+      setIsEditing(false);
+      setEditSubcategoryId(null);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this subcategory?")) {
-      return;
-    }
+  // Handle opening the "delete" confirmation modal
+  const handleDelete = (id) => {
+    setConfirmAction(() => () => performDelete(id));
+    setConfirmMessage("Are you sure you want to delete this subcategory?");
+    setShowConfirm(true);
+  };
+
+  // Perform the actual deletion after confirmation
+  const performDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/subcategories/${id}`, {
+      const url = `${API_BASE_URL}/api/subcategories/${id}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -164,11 +200,16 @@ const Subcategories = () => {
     } catch (err) {
       console.error("Failed to delete subcategory:", err);
       showToast(`Failed to delete subcategory: ${err.message}`, "error");
+    } finally {
+      setShowConfirm(false);
+      setConfirmAction(null);
     }
   };
 
+  // Tailwind CSS classes for table styling
   const tableHeaderClasses = "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider";
   const tableCellClasses = "px-6 py-4 whitespace-nowrap text-sm";
+  const modalButtonClasses = "px-4 py-2 text-sm font-medium rounded-md transition duration-150 ease-in-out";
 
   return (
     <DashboardLayout>
@@ -176,9 +217,10 @@ const Subcategories = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Subcategories</h1>
           <button
-            onClick={handleAddSubcategory}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out"
+            onClick={handleOpenAddModal}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition duration-150 ease-in-out flex items-center gap-2"
           >
+            <PlusIcon className="w-4 h-4" />
             Add New Subcategory
           </button>
         </div>
@@ -205,20 +247,17 @@ const Subcategories = () => {
                   {subcategoriesData.map((subcategory) => (
                     <tr key={subcategory._id}>
                       <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{subcategory.name}</td>
-                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{subcategory.category ? subcategory.category.name : 'N/A'}</td> {/* Display category name */}
-                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{subcategory.description}</td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>
+                        {subcategory.category?.name || 'N/A'}
+                      </td>
+                      <td className={tableCellClasses} style={{ color: 'var(--text-primary)' }}>{subcategory.description || 'N/A'}</td>
                       <td className={tableCellClasses}>
                         <div className="flex items-center space-x-2">
-                          <button onClick={() => handleEdit(subcategory._id)} className="text-blue-500 hover:text-blue-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.75" />
-                            </svg>
+                          <button onClick={() => handleOpenEditModal(subcategory)} className="text-blue-500 hover:text-blue-700">
+                            <PencilSquareIcon className="w-5 h-5" />
                           </button>
                           <button onClick={() => handleDelete(subcategory._id)} className="text-red-500 hover:text-red-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.262 9m10.118-3.468a.75.75 0 0 0 0-1.06L18.47 3.22a.75.75 0 0 0-1.06 0l-1.06 1.06M16.5 7.5h-9m9 0H12m-2.25 4.5h3.5m-3.5 0a.75.75 0 0 1-.75.75h-.75a.75.75 0 0 1-.75-.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12m0 0a.75.75 0 0 0-.75-.75h-.75a.75.75 0 0 0-.75.75m1.5 0V12" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.5h-15V21a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />
-                            </svg>
+                            <TrashIcon className="w-5 h-5" />
                           </button>
                         </div>
                       </td>
@@ -232,12 +271,147 @@ const Subcategories = () => {
           <div className="flex justify-between items-center mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>{subcategoriesData.length > 0 ? `1 to ${subcategoriesData.length} of ${subcategoriesData.length}` : '0 to 0 of 0'}</span>
             <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Previous</button>
-              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>Next</button>
+              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>
+                <ArrowLeftIcon className="w-4 h-4" />
+              </button>
+              <button className="px-3 py-1 border rounded-md" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--bg-input)' }}>
+                <ArrowRightIcon className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal (for deletion) */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <p className="text-lg mb-4" style={{ color: 'var(--text-primary)' }}>{confirmMessage}</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className={`${modalButtonClasses} text-gray-700 bg-gray-200 hover:bg-gray-300`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                className={`${modalButtonClasses} text-white bg-red-600 hover:bg-red-700`}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Subcategory Modal */}
+      {isAdding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Add New Subcategory</h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Subcategory Name"
+                value={newSubcategoryName}
+                onChange={(e) => setNewSubcategoryName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              />
+              <select
+                value={newSubcategoryCategoryId}
+                onChange={(e) => setNewSubcategoryCategoryId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              >
+                <option value="">Select a Category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                placeholder="Subcategory Description (optional)"
+                value={newSubcategoryDescription}
+                onChange={(e) => setNewSubcategoryDescription(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="3"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              />
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setIsAdding(false)}
+                className={`${modalButtonClasses} text-gray-700 bg-gray-200 hover:bg-gray-300`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddSubcategory}
+                className={`${modalButtonClasses} text-white bg-blue-600 hover:bg-blue-700`}
+              >
+                Add Subcategory
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Subcategory Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Edit Subcategory</h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Subcategory Name"
+                value={editSubcategoryName}
+                onChange={(e) => setEditSubcategoryName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              />
+              <select
+                value={editSubcategoryCategoryId}
+                onChange={(e) => setEditSubcategoryCategoryId(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              >
+                <option value="">Select a Category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                placeholder="Subcategory Description"
+                value={editSubcategoryDescription}
+                onChange={(e) => setEditSubcategoryDescription(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows="3"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', borderColor: 'var(--border-light)' }}
+              />
+            </div>
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setIsEditing(false)}
+                className={`${modalButtonClasses} text-gray-700 bg-gray-200 hover:bg-gray-300`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEdit}
+                className={`${modalButtonClasses} text-white bg-blue-600 hover:bg-blue-700`}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
