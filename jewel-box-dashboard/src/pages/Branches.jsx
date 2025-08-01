@@ -20,11 +20,8 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // This will be the base URL for API calls.
-  // In a Vercel environment, process.env.VERCEL_URL will be set.
-  // In a local environment, VITE_API_URL can be used.
-  // If neither is present, it defaults to a relative path.
-  const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+  // Define the base URL, ensuring there's no trailing slash to prevent double slashes.
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
@@ -35,8 +32,7 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // Use a relative path for the API endpoint. This works on Vercel's
-        // serverless functions and for local dev when VITE_API_URL is set.
+        // Correctly construct the URL using the cleaned base URL.
         const url = `${API_BASE_URL}/api/branches`;
         const response = await fetch(url);
         if (!response.ok) {
