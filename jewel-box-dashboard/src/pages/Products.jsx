@@ -1,26 +1,12 @@
+// src/pages/Products.jsx
 import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../components/Layout/DashboardLayout';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 
-// --- MOCK DEPENDENCIES for self-contained app ---
-// In a real app, these would be separate files/contexts
-const DashboardLayout = ({ children }) => (
-  <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200 p-8 font-inter">
-    <div className="max-w-7xl mx-auto">{children}</div>
-  </div>
-);
-
-const useTheme = () => ({
-  isDarkMode: false,
-});
-
-const useToast = () => ({
-  showToast: (message, type) => {
-    const color = type === 'success' ? 'green' : 'red';
-    console.log(`%c[Toast ${type.toUpperCase()}] ${message}`, `color: white; background-color: ${color}; padding: 2px 4px; border-radius: 4px;`);
-  },
-});
-
 // --- Reusable Modal Component ---
+// You should move this component to its own file, e.g., 'src/components/Modal.jsx'
 const Modal = ({ isOpen, title, onClose, children, actions }) => {
   if (!isOpen) return null;
 
@@ -46,7 +32,7 @@ const Modal = ({ isOpen, title, onClose, children, actions }) => {
   );
 };
 
-// --- Main Products Component (Refactored) ---
+// --- Main Products Component ---
 const Products = () => {
   const { isDarkMode } = useTheme();
   const { showToast } = useToast();
@@ -238,7 +224,7 @@ const Products = () => {
 
   // Filter subcategories based on the selected category
   const filteredSubcategories = formState.categoryId
-    ? subcategories.filter(sub => sub.category._id === formState.categoryId)
+    ? subcategories.filter(sub => sub.category?._id === formState.categoryId)
     : [];
 
   const tableHeaderClasses = "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider";
@@ -391,9 +377,4 @@ const Products = () => {
   );
 };
 
-// --- App component for previewing ---
-const App = () => {
-  return <Products />;
-};
-
-export default App;
+export default Products;
