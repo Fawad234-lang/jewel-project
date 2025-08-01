@@ -415,7 +415,7 @@ const Dashboard = () => {
                                  style={{
                                   backgroundColor: order.status === 'Completed' ? 'var(--bg-green-status)' : 'var(--bg-yellow-status)',
                                   color: order.status === 'Completed' ? 'var(--text-green)' : 'var(--text-red)'
-                                }}>
+                                 }}>
                             {order.status}
                           </span>
                         </td>
@@ -631,7 +631,7 @@ const Dashboard = () => {
                 {totalSalesmanPages}
               </strong>
             </span>
-            <span className="flex flex-col sm:flex-row items-center gap-1 text-sm">
+            <span className="flex flex-col sm:flex-row items-center gap-1 text-sm"> {/* Adjusted for small screens */}
               | Go to page:{' '}
               <input
                 type="number"
@@ -661,39 +661,6 @@ const Dashboard = () => {
                 </option>
               ))}
             </select>
-          </div>
-        </div>
-
-        {/* GST Percentage Settings */}
-        <div className="p-4 sm:p-6 rounded-lg shadow-md transition-colors duration-200" style={{ backgroundColor: 'var(--bg-card)' }}>
-          <h2 className="text-xl sm:text-2xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>Tax Settings</h2>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="flex items-center w-full md:w-auto">
-              <label htmlFor="gst-percentage" className="text-sm font-medium mr-2 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
-                GST Percentage:
-              </label>
-              <input
-                id="gst-percentage"
-                type="number"
-                min="0"
-                max="100"
-                value={gstPercentage}
-                onChange={(e) => setGstPercentage(Number(e.target.value))}
-                className={`${gstInputClasses} w-20 text-center`}
-                style={{
-                  borderColor: 'var(--border-light)',
-                  backgroundColor: 'var(--bg-input)',
-                  color: 'var(--text-primary)',
-                }}
-              />
-              <span className="text-sm ml-2" style={{ color: 'var(--text-secondary)' }}>%</span>
-            </div>
-            <button
-              onClick={handleSaveTaxSettings}
-              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-150 ease-in-out hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 w-full md:w-auto"
-            >
-              Save Tax
-            </button>
           </div>
         </div>
       </div>
