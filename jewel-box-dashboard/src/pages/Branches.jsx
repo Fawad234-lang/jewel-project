@@ -20,7 +20,8 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // Define the base URL, ensuring there's no trailing slash to prevent double slashes.
+  // This will read the environment variable set in Vercel.
+  // The .replace(/\/$/, '') part ensures no double slashes.
   const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
   useEffect(() => {
@@ -32,7 +33,8 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // Correctly construct the URL using the cleaned base URL.
+        // Correctly construct the URL. For Vercel, this will become
+        // https://jewel-project-production.up.railway.app/api/branches
         const url = `${API_BASE_URL}/api/branches`;
         const response = await fetch(url);
         if (!response.ok) {
@@ -43,7 +45,7 @@ const Branches = () => {
         showToast("Branches loaded successfully!", "success");
       } catch (err) {
         console.error("Failed to fetch branches:", err);
-        setError("Failed to load branches. Please ensure the backend server is running.");
+        setError("Failed to load branches. Please ensure the backend server is running and accessible.");
         showToast("Failed to load branches!", "error");
       } finally {
         setLoading(false);
