@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
-import { lucideReact } from 'lucide-react';
+
 
 const Expenses = () => {
     const { isDarkMode } = useTheme();
