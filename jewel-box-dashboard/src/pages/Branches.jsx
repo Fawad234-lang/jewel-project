@@ -20,16 +20,8 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // Use the VITE_API_URL, which is defined in your environment variables.
-  // This will be "http://localhost:5000" in development.
+  // The VITE_API_URL is now used directly without any string manipulation.
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-  // This is the key change. We dynamically set the API path based on the environment.
-  // If the URL contains 'railway.app' or 'vercel.app', we use the root path '/branches'.
-  // Otherwise, for local development, we use the standard API path '/api/branches'.
-  const API_ENDPOINT_PATH = API_BASE_URL.includes('railway') || API_BASE_URL.includes('vercel')
-    ? '/branches'
-    : '/api/branches';
 
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
@@ -40,8 +32,9 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // Construct the full URL using the dynamic path.
-        const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
+        // FIX: Construct the URL to avoid double slashes.
+        // It checks if the base URL ends with a slash and adds one if needed.
+        const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -59,7 +52,7 @@ const Branches = () => {
     };
 
     fetchBranches();
-  }, [showToast, API_BASE_URL, API_ENDPOINT_PATH]);
+  }, [showToast, API_BASE_URL]);
 
   const handleAddBranch = async () => {
     const newBranch = {
@@ -68,8 +61,7 @@ const Branches = () => {
       contact: '0987654321',
     };
     try {
-      // Use the dynamic path for the add operation.
-      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -105,8 +97,7 @@ const Branches = () => {
     }
     
     try {
-      // Use the dynamic path for the edit operation.
-      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${editBranchId}`;
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${editBranchId}`;
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -142,8 +133,7 @@ const Branches = () => {
   
   const performDelete = async (id) => {
     try {
-      // Use the dynamic path for the delete operation.
-      const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${id}`;
+      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
       });
@@ -192,9 +182,7 @@ const Branches = () => {
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Name</th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Location</th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Contact</th>
-                    <th scope="col" className="relative px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                        <span className="sr-only">Actions</span>Actions
-                    </th>
+                    <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Actions</th>
                     <th scope="col" className={tableHeaderClasses} style={{ color: 'var(--text-secondary)' }}>Inventory</th>
                   </tr>
                 </thead>
