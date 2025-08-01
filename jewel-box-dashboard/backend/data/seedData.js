@@ -7,7 +7,7 @@ const Warehouse = require('../models/warehouseModels');
 const Branch = require('../models/branchModels');
 const User = require('../models/userModels'); // Re-confirmed import
 const Category = require('../models/categoryModels');
-const Subcategory = require('../models/subCategoryModels');
+const Subcategory = require('../models/subcategoryModels');
 const Product = require('../models/productModels');
 const Expense = require('../models/expenseModels');
 
