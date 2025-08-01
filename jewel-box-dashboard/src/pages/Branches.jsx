@@ -20,13 +20,16 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // Define the base URL from environment variables.
+  // Use the VITE_API_URL, which is defined in your environment variables.
   // This will be "http://localhost:5000" in development.
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  // Define the fixed API path for all environments as requested.
-  // This path must be configured on your backend server.
-  const API_ENDPOINT_PATH = '/api/branches';
+  // This is the key change. We dynamically set the API path based on the environment.
+  // If the URL contains 'railway.app' or 'vercel.app', we use the root path '/branches'.
+  // Otherwise, for local development, we use the standard API path '/api/branches'.
+  const API_ENDPOINT_PATH = API_BASE_URL.includes('railway') || API_BASE_URL.includes('vercel')
+    ? '/branches'
+    : '/api/branches';
 
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
@@ -37,7 +40,7 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // Use the consistent API path for fetching branches.
+        // Construct the full URL using the dynamic path.
         const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
         const response = await fetch(url);
         if (!response.ok) {
@@ -48,7 +51,7 @@ const Branches = () => {
         showToast("Branches loaded successfully!", "success");
       } catch (err) {
         console.error("Failed to fetch branches:", err);
-        setError("Failed to load branches. Please ensure the backend server is running and configured for the /api/branches path.");
+        setError("Failed to load branches. Please ensure the backend server is running.");
         showToast("Failed to load branches!", "error");
       } finally {
         setLoading(false);
@@ -56,7 +59,7 @@ const Branches = () => {
     };
 
     fetchBranches();
-  }, [showToast, API_BASE_URL]);
+  }, [showToast, API_BASE_URL, API_ENDPOINT_PATH]);
 
   const handleAddBranch = async () => {
     const newBranch = {
@@ -65,7 +68,7 @@ const Branches = () => {
       contact: '0987654321',
     };
     try {
-      // Use the consistent API path for adding a new branch.
+      // Use the dynamic path for the add operation.
       const url = `${API_BASE_URL}${API_ENDPOINT_PATH}`;
       const response = await fetch(url, {
         method: 'POST',
@@ -102,7 +105,7 @@ const Branches = () => {
     }
     
     try {
-      // Use the consistent API path for editing a branch.
+      // Use the dynamic path for the edit operation.
       const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${editBranchId}`;
       const response = await fetch(url, {
         method: 'PUT',
@@ -139,7 +142,7 @@ const Branches = () => {
   
   const performDelete = async (id) => {
     try {
-      // Use the consistent API path for deleting a branch.
+      // Use the dynamic path for the delete operation.
       const url = `${API_BASE_URL}${API_ENDPOINT_PATH}/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
