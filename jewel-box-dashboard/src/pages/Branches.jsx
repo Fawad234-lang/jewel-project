@@ -20,8 +20,11 @@ const Branches = () => {
   const [editBranchId, setEditBranchId] = useState(null);
   const [newBranchName, setNewBranchName] = useState('');
 
-  // The VITE_API_URL is now used directly without any string manipulation.
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // This will be the base URL for API calls.
+  // In a Vercel environment, process.env.VERCEL_URL will be set.
+  // In a local environment, VITE_API_URL can be used.
+  // If neither is present, it defaults to a relative path.
+  const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
   useEffect(() => {
     document.title = "Branches - Jewel Box App";
@@ -32,9 +35,9 @@ const Branches = () => {
       try {
         setLoading(true);
         setError(null);
-        // FIX: Construct the URL to avoid double slashes.
-        // It checks if the base URL ends with a slash and adds one if needed.
-        const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
+        // Use a relative path for the API endpoint. This works on Vercel's
+        // serverless functions and for local dev when VITE_API_URL is set.
+        const url = `${API_BASE_URL}/api/branches`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -61,7 +64,7 @@ const Branches = () => {
       contact: '0987654321',
     };
     try {
-      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches`;
+      const url = `${API_BASE_URL}/api/branches`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -97,7 +100,7 @@ const Branches = () => {
     }
     
     try {
-      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${editBranchId}`;
+      const url = `${API_BASE_URL}/api/branches/${editBranchId}`;
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -133,7 +136,7 @@ const Branches = () => {
   
   const performDelete = async (id) => {
     try {
-      const url = `${API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL}/api/branches/${id}`;
+      const url = `${API_BASE_URL}/api/branches/${id}`;
       const response = await fetch(url, {
         method: 'DELETE',
       });
